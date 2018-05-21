@@ -108,7 +108,7 @@ Vue.component('tool-li', {
 		}
 	}
 })
-
+/*
 Vue.component('all-alerts-modal', {
 	template: '#all-alerts-modal-template',
 	props: ['show', 'title'],
@@ -214,7 +214,7 @@ Vue.component('alert-details-modal', {
 		})
 	}
 })
-
+*/
 Vue.component('simple-menu-modal', {
 	template: '#simple-menu-modal-template',
 	props: ['show', 'title'],
