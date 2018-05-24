@@ -287,6 +287,78 @@ Vue.component('tab', {
     },
 });
 
+Vue.component('scope-modal', {
+	template: '#scope-modal-template',
+	props: ['show', 'title'],
+	methods: {
+		close: function() {
+			this.$emit('close');
+		},
+		save: function() {
+			// TODO check they are valid regexes
+			var incRegexJson = [];
+			var regexArray = this.incRegexs.split('\n');
+			for (var i = 0; i < regexArray.length; i++) {
+				var regex = regexArray[i];
+				try {
+					new RegExp(regex);
+				} catch(e) {
+					this.errorMessage = 'Invalid \'include\' regex: ' + regex
+					return;
+				}
+				incRegexJson.push(regex);
+			}
+			
+			this.port.postMessage({'action': 'scopeUpdated', 'incRegexs': incRegexJson});
+			this.close();
+		},
+		addDomainToScope: function() {
+			if (this.incRegexs.length > 0 && ! this.incRegexs.endsWith('\n')) {
+				this.incRegexs += "\n";
+			}
+			this.incRegexs += this.domain + ".*";
+			this.addedDomain = true;
+			// Move cursor to end of textarea to make it more obvious that the domains been added
+			var textarea = this.$el.querySelector("#increg");
+			textarea.setSelectionRange(textarea.value.length,textarea.value.length);
+		},
+		addUrlToScope: function() {
+			if (this.incRegexs.length > 0 && ! this.incRegexs.endsWith('\n')) {
+				this.incRegexs += "\n";
+			}
+			// TODO need to pass this in
+			this.incRegexs += window.location.href;
+		}
+	},
+	data() {
+		return {
+			port: null,
+			details: {},
+			domain: null,
+			incRegexs : null,
+			excRegexs : null,
+			addedDomain: false,
+			errorMessage: ''
+		}
+	},
+	created() {
+		let self = this;
+
+		Event.listen('showScopeModal', function(data) {
+			log (LOG_DEBUG, 'display.js', 'Got showScopeModal event'); // TODO remove
+			app.isScopeModalShown = true;
+			app.scopeModalTitle = data.title;
+			self.incRegexs = JSON.parse(data.context.includeRegexs).join('\n');
+			self.excRegexs = JSON.parse(data.context.excludeRegexs).join('\n');
+			self.domain = data.domain;
+			self.details = data.details;	// TODO dont need?
+			self.port = data.port;
+			self.addedDomain = false;
+			self.errorMessage = '';
+		})
+	}
+})
+
 document.addEventListener("DOMContentLoaded", function() {
 
 	/* Vue app */
@@ -305,6 +377,8 @@ document.addEventListener("DOMContentLoaded", function() {
 			alertDetailsModalTitle: "Alert Details",
 			isSimpleMenuModalShown: false,
 			simpleMenuModalTitle: "Menu",
+			isScopeModalShown: false,
+			scopeModalTitle: "Scope",
 			keepShowing: false,
 		},
 	});
@@ -314,6 +388,7 @@ navigator.serviceWorker.addEventListener("message", function(event) {
 	var action = event.data.action;
 	var config = event.data.config;
 	var port = event.ports[0];
+	log (LOG_ERROR, 'display.js', 'Got message with action: ' + action);
 	
 	switch(action) {
 		case "showDialog":
@@ -377,6 +452,16 @@ navigator.serviceWorker.addEventListener("message", function(event) {
 				port: port
 			});
 		
+		case "showScope":
+			log (LOG_DEBUG, 'display.js', 'Got showScope event');
+			Event.fire('showScopeModal', {
+				title: 'Scope',
+				items: config.settings,
+				port: port,
+				context: config.context,
+				domain: config.domain
+			});
+		
 			break;
 
 		case "showHttpMessage":
@@ -384,6 +469,7 @@ navigator.serviceWorker.addEventListener("message", function(event) {
 			break;
 
 		default:
+			log (LOG_ERROR, 'display.js', 'Unexpected action: ' + action);
 			break;
 	}
 

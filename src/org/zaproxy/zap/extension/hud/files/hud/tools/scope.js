@@ -40,45 +40,42 @@ var Scope = (function() {
 
 		checkDomainInScope(domain)
 			.then(function(isInScope) {
-				var config = {};
-
-				if(!isInScope) {
-					config.title = LABEL;
-					config.text = DIALOG.OUT;
-					config.buttons = [
-						{text:"Add",
-						id:"add"},
-						{text:"Cancel",
-						id:"cancel"}
-					];
-				}
-				else {
-					config.text = DIALOG.IN;
-					config.buttons = [
-						{text:"Remove",
-						id:"remove"},
-						{text:"Cancel",
-						id:"cancel"}
-					];
-				}
-
-				messageFrame("display", {action:"showDialog", config:config})
+				fetch("<<ZAP_HUD_API>>/context/view/context/?contextName=Default+Context")
 					.then(function(response) {
+						response.json().then(function(json) {
+							var config = {};
+							config.domain = domain;
 
-						// Handle button choice
-						if (response.id === "add") {
-							addToScope(domain);
-						}
-						else if (response.id === "remove") {
-							removeFromScope(domain);
-						}
-						else {
-							//cancel
-						}
-					});
+							if(!isInScope) {
+								config.title = LABEL;
+								config.text = DIALOG.OUT;
+							}
+							else {
+								config.text = DIALOG.IN;
+							}
+							config.context = json.context;
 
+							messageFrame("display", {action:"showScope", config:config})
+								.then(function(response) {
+									// TODO work in progress
+									log (LOG_DEBUG, 'scope.js', 'Post showScope dialog', response);
+									
+									// Loop though new regexes adding any new ones
+									var incJson = JSON.parse(json.context.includeRegexs);
+									for(var i=0; i < response.incRegexs.length; i+=1) {
+										var regex = response.incRegexs[i];
+										if (incJson.indexOf(regex) < 0) {
+											// TODO add to context
+											log (LOG_DEBUG, 'scope.js', 'TODO add ', regex);
+										}
+									}
+									// Loop though old regexes removing any no longer there
+								});
+
+						}).catch(errorHandler);
+					})
 			})
-			.catch(errorHandler);
+			
 	}
 
 	function checkDomainInScope(domain) {

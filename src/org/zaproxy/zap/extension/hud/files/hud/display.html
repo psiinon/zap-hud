@@ -17,6 +17,7 @@
             <all-alerts-modal :show="isAllAlertsModalShown" :title="allAlertsModalTitle" @close="isAllAlertsModalShown = false"></all-alerts-modal>
             <alert-details-modal :show="isAlertDetailsModalShown" :title="alertDetailsModalTitle" @close="isAlertDetailsModalShown = false"></alert-details-modal>
             <simple-menu-modal :show="isSimpleMenuModalShown" :title="simpleMenuModalTitle" @close="isSimpleMenuModalShown = false"></simple-menu-modal>
+            <scope-modal :show="isScopeModalShown" :title="scopeModalTitle" @close="isScopeModalShown = false"></scope-modal>
         </div>
         
         <!-- a base modal component -->
@@ -180,5 +181,31 @@
         <template id="tab-template">
             <div v-show="isActive"><slot></slot></div>
         </template>
+
+        <!-- scope component -->
+        <template id="scope-modal-template">
+            <modal :title="title" :show="show" @close="close">
+                <div slot="body">
+                    <span>Include Regexs:</span>
+                    <br>
+                    <textarea id="increg" v-model="incRegexs" placeholder=""></textarea>
+                    <br>
+                    <br>
+                    <span>Exclude Regexs:</span>
+                    <br>
+                    <textarea v-model="excRegexs" placeholder=""></textarea>
+                    <br>
+                    <br>
+                    <button class="btn" :disabled="addedDomain" @click="addDomainToScope()">Add domain to scope</button>&nbsp;
+                    <button class="btn" @click="addUrlToScope()">Add URL to scope</button>
+                    <br>
+                    <br>
+                    <p class="error">{{errorMessage}}</p>
+                    <button class="btn" @click="close()">Cancel</button>&nbsp;
+                    <button class="btn" @click="save()">Save</button>
+                </div>
+            </modal>
+        </template>
+
     </body>
 </html>
