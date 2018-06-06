@@ -132,7 +132,7 @@ function parseDomainFromUrl(url) {
 	hostname = hostname.split('?')[0];
 	hostname = hostname.split('#')[0];
 
-	return protocol + hostname;
+	return hostname;
 }
 
 //todo change to be sw agnostic
@@ -344,6 +344,7 @@ function saveTool(tool) {
 						// this is only catching the NoClientIdError which occurs 
 						// when tools are added on startup and the panels haven't 
 						// been added yet
+						log(LOG_WARN, "messageFrame", "NoClientIdError - panel: " + tool.panel + " not yet available to be messaged", err);
 					});
 			}
 

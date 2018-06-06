@@ -12,13 +12,20 @@ Vue.component('hud-button', {
 	props: ['label', 'icon', 'data'],
 	data() {
 		return {
-			showData:false
+			showData: false,
+			isActive: false
 		}
 	},
 	methods: {
 		click: function() {
 			navigator.serviceWorker.controller.postMessage({action:'showHudSettings'});
 		},
+		mouseOver() {
+			this.isActive = true;
+		},
+		mouseLeave() {
+			this.isActive = false;
+		}
 	}
 })
 
@@ -51,9 +58,12 @@ document.addEventListener('DOMContentLoaded', function() {
 		// show the settings button
 		app.isSettingsButtonShown = true;
 
-		// send onTargetLoad message 
-		navigator.serviceWorker.controller.postMessage({action:"onTargetLoad", targetUrl: document.referrer});
+		// send targetload message 
+		navigator.serviceWorker.controller.postMessage({action:"targetload", targetUrl: document.referrer});
+
 	}
+
+	startHeartBeat();
 });
 
 navigator.serviceWorker.addEventListener('message', function(event) {
@@ -111,4 +121,13 @@ function startServiceWorker() {
 	else {
 		alert('This browser does not support Service Workers. The HUD will not work properly.')
 	}
+}
+
+/*
+ * Starts sending heart beat messages to the ZAP API every 10 seconds
+ */
+function startHeartBeat() {
+	setInterval(function() {
+		log(LOG_INFO, 'heartbeat', 'heartbeat')
+	}, 10000)
 }
