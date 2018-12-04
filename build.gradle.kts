@@ -95,7 +95,7 @@ spotless {
 
     format("css", {
         target(sourcesWithoutLibs("css"))
-        prettier().config(mapOf("parser" to "css"))
+        //prettier().config(mapOf("parser" to "css"))
     })
 }
 
