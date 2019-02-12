@@ -38,6 +38,10 @@ var urlsToCache = [
 
 self.tools = {};
 
+// default tools
+var DEFAULT_TOOLS_LEFT = ["scope", "break", "showEnable", "page-alerts-high", "page-alerts-medium", "page-alerts-low", "page-alerts-informational"];
+var DEFAULT_TOOLS_RIGHT = ["site-tree", "spider", "active-scan", "attack", "site-alerts-high", "site-alerts-medium", "site-alerts-low", "site-alerts-informational"];
+
 localforage.setItem("tools", [])
 	.then(() => {
 		// load tool scripts
@@ -57,7 +61,60 @@ localforage.setItem("tools", [])
 	.catch(utils.errorHandler);
 
 const onInstall = event => {
-	utils.log(LOG_INFO, 'serviceworker.install', 'Installing...');
+	
+	/* Set up WebSockets */
+	let ZAP_HUD_WS = '<<ZAP_HUD_WS>>';
+	webSocket = new WebSocket(ZAP_HUD_WS);
+
+	webSocket.onopen = function (event) {
+		// Wont be able to log until ther websocket is set up
+		utils.log(LOG_INFO, 'serviceworker.install', 'Installing...');
+		// Basic test
+		webSocket.send('{ "component" : "core", "type" : "view", "name" : "version" }'); 
+
+		// Tools should register for alerts via the registerForWebSockerEvents function - see the break tool
+
+		apiCallWithResponse("hud", "view", "upgradedDomains")
+			.then(response => {
+				let upgradedDomains = {};
+
+				for (const domain of response.upgradedDomains) {
+					upgradedDomains[domain] = true;
+				}
+				return localforage.setItem('upgradedDomains', upgradedDomains);
+			})
+			.catch(utils.errorHandler);
+	};
+
+	webSocket.onmessage = function (event) {
+		// Rebroadcast for the tools to pick up
+		let jevent = JSON.parse(event.data);
+
+		if ('event.publisher' in jevent) {
+			utils.log(LOG_DEBUG, 'serviceworker.webSocket.onmessage', jevent['event.publisher']);
+			var ev = new CustomEvent(jevent['event.publisher'], {detail: jevent});
+			self.dispatchEvent(ev);
+		} else if ('id' in jevent && 'response' in jevent) {
+			let pFunctions = webSocketCallbacks[jevent['id']];
+			let response = jevent['response'];
+			if ('code' in response && 'message' in response) {
+				// These always indicate a failure
+				let error = new Error(I18n.t("error_with_message", [response['message']]));
+				error.response = response;
+
+				pFunctions.reject(error);
+			} else {
+				pFunctions.resolve(response);
+			}
+			delete webSocketCallbacks[jevent['id']];
+		} else {
+			utils.log(LOG_DEBUG, 'serviceworker.webSocket.onmessage', 'Unexpected message', jevent);
+		}
+	};
+
+	webSocket.onerror = function (event) {
+		utils.log(LOG_ERROR, 'websocket', '', event);
+	};
 
 	// Cache Files
 	// not sure caching in service worker provides advantage over browser - may be able to remove
@@ -76,11 +133,27 @@ const onActivate = event => {
 		utils.isHUDInitialized()
 			.then(isInitialized => {
 				if (!isInitialized) {
-					return utils.initializeHUD();
+					var promises = [
+							apiCallWithResponse("hud", "view", "getUiOption", { key: 'leftPanel' }),
+							apiCallWithResponse("hud", "view", "getUiOption", { key: 'rightPanel' })];
+
+					Promise.all(promises)
+						.then(results => {
+							// set the tools after configuring storage
+							var leftPanelTools = results[0].leftPanel;
+							if (leftPanelTools.length === 0) {
+								leftPanelTools = DEFAULT_TOOLS_LEFT;
+							}
+							var rightPanelTools = results[1].rightPanel;
+							if (rightPanelTools.length === 0) {
+								rightPanelTools = DEFAULT_TOOLS_RIGHT;
+							}
+							return utils.initializeHUD(leftPanelTools, rightPanelTools);
+						})
 				}
 			})
 			.catch(utils.errorHandler)
-	);
+		);
 };
 
 // if we remove cache we can remove this as well
@@ -155,66 +228,21 @@ const logHandler = event => {
 	apiCall("hud", "action", "log", { record: event.detail.record });
 };
 
+const backupHandler = event => {
+	backup(event.detail.key, event.detail.value);
+};
+
+function backup(key, value) {
+	apiCall("hud", "action", "setUiOption", { key: key, value: value });
+}
+
 self.addEventListener("install", onInstall); 
 self.addEventListener("activate", onActivate);
 self.addEventListener("fetch", onFetch);
 self.addEventListener("message", onMessage);
 self.addEventListener('error', utils.errorHandler);
 self.addEventListener('hud.log', logHandler);
-
-/* Set up WebSockets */
-
-{
-	let ZAP_HUD_WS = '<<ZAP_HUD_WS>>';
-	webSocket = new WebSocket(ZAP_HUD_WS);
-}
-
-webSocket.onopen = function (event) {
-	// Basic test
-	webSocket.send('{ "component" : "core", "type" : "view", "name" : "version" }'); 
-	// Tools should register for alerts via the registerForWebSockerEvents function - see the break tool
-
-	apiCallWithResponse("hud", "view", "upgradedDomains")
-		.then(response => {
-			let upgradedDomains = {};
-
-			for (const domain of response.upgradedDomains) {
-				upgradedDomains[domain] = true;
-			}
-			return localforage.setItem('upgradedDomains', upgradedDomains);
-		})
-		.catch(utils.errorHandler);
-};
-
-webSocket.onmessage = function (event) {
-	// Rebroadcast for the tools to pick up
-	let jevent = JSON.parse(event.data);
-
-	if ('event.publisher' in jevent) {
-		utils.log(LOG_DEBUG, 'serviceworker.webSocket.onmessage', jevent['event.publisher']);
-		var ev = new CustomEvent(jevent['event.publisher'], {detail: jevent});
-		self.dispatchEvent(ev);
-	} else if ('id' in jevent && 'response' in jevent) {
-		let pFunctions = webSocketCallbacks[jevent['id']];
-		let response = jevent['response'];
-		if ('code' in response && 'message' in response) {
-			// These always indicate a failure
-			let error = new Error(I18n.t("error_with_message", [response['message']]));
-			error.response = response;
-
-			pFunctions.reject(error);
-		} else {
-			pFunctions.resolve(response);
-		}
-		delete webSocketCallbacks[jevent['id']];
-	} else {
-		utils.log(LOG_DEBUG, 'serviceworker.webSocket.onmessage', 'Unexpected message', jevent);
-	}
-};
-
-webSocket.onerror = function (event) {
-	utils.log(LOG_ERROR, 'websocket', '', event);
-};
+self.addEventListener('hud.backup', backupHandler);
 
 function registerForZapEvents(publisher) {
 	apiCall("event", "register", publisher);
@@ -288,7 +316,7 @@ function showHudSettings(tabId) {
 };
 
 function resetToDefault() {
-	utils.initializeHUD()
+	utils.initializeHUD(DEFAULT_TOOLS_LEFT, DEFAULT_TOOLS_RIGHT)
 		.then(utils.loadAllTools)
 		.then(tools => {
 			var promises = [];
@@ -296,6 +324,9 @@ function resetToDefault() {
 			for (var tool in tools) {
 				promises.push(self.tools[tools[tool].name].initialize());
 			}
+			// Clearing these values means they will go back to the default when next read
+			promises.push(backup('leftPanel', ''));
+			promises.push(backup('rightPanel', ''));
 
 			return Promise.all(promises);
 		})
