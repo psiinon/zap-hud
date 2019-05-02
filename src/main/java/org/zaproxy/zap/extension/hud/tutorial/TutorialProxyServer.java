@@ -75,6 +75,7 @@ public class TutorialProxyServer extends ProxyServer {
     private ExtensionHUD extension;
     private String hostPort;
     private Map<String, TutorialPage> pages = new HashMap<String, TutorialPage>();
+    private int pageCount = 0;
 
     private Logger log = Logger.getLogger(this.getClass());
 
@@ -117,7 +118,14 @@ public class TutorialProxyServer extends ProxyServer {
         if (this.pages.put(page.getName(), page) != null) {
             log.error("2 tutorial pages with the same name registered: " + page.getName());
         }
+        if (page.getPreviousPage() != null) {
+            page.setPageIndex(++this.pageCount);
+        }
         return page;
+    }
+    
+    protected int getPageCount() {
+        return this.pageCount;
     }
 
     /** The server is started after initialisation so that the parameters will have been loaded. */

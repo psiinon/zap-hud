@@ -43,6 +43,7 @@ public abstract class TutorialPage {
     private boolean taskJustCompleted = false;
     private String key;
     private String antiCsrfToken = UUID.randomUUID().toString();
+    private int pageIndex;
 
     public Logger log = Logger.getLogger(this.getClass());
 
@@ -250,6 +251,11 @@ public abstract class TutorialPage {
 
     private String getButtonsHtml() {
         StringBuilder sb = new StringBuilder();
+        // TODO add progress here?
+        if (this.getPageIndex() > 0) {
+            sb.append("SB HACK page " + this.getPageIndex() + " of " + this.tutorialProxyServer.getPageCount());
+            sb.append("<br>");
+        }
         sb.append("<div class=\"buttonsDiv\">\n");
         sb.append("<div class=\"indexDiv\">\n");
         sb.append("<a href=\"");
@@ -311,6 +317,14 @@ public abstract class TutorialPage {
             }
         }
         return map;
+    }
+    
+    protected void setPageIndex(int index) {
+        this.pageIndex = index;
+    }
+    
+    public int getPageIndex() {
+        return this.pageIndex;
     }
 
     public abstract String getName();
