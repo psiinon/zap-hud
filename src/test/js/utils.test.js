@@ -1,4 +1,4 @@
-import test from 'ava';
+import test from 'ava'
 
 // TODO: use clean build system
 // Dynamically load utils functions from utils.js
@@ -11,17 +11,17 @@ global.eval(jsCode)
 
 test('sortToolsByPosition result are in descending order', t => {
   var tools = [{
-    'position': 3,
-    'name': 'shovel'
+    position: 3,
+    name: 'shovel'
   }, {
-    'position': 1,
-    'name': 'screwdriver'
+    position: 1,
+    name: 'screwdriver'
   }, {
-    'position': 4,
-    'name': 'wheelbarrow'
+    position: 4,
+    name: 'wheelbarrow'
   }, {
-    'position': 2,
-    'name': 'hammer'
+    position: 2,
+    name: 'hammer'
   }]
 
   utils.sortToolsByPosition(tools)
@@ -31,7 +31,6 @@ test('sortToolsByPosition result are in descending order', t => {
   t.is(tools[2]['name'], 'hammer')
   t.is(tools[3]['name'], 'screwdriver')
 })
-
 
 test('parseDomainFromUrl returns domain from url without protocol', t => {
   var url = 'zaproxy.org'
@@ -80,17 +79,17 @@ test.skip('parseDomainFromUrl returns domain from url containing subdomains', t 
 })
 
 test('isFromTrustedOrigin returns true when origin is ZAP', t => {
-  const message = { 'origin': 'https://zap' };
+  const message = { origin: 'https://zap' }
   t.true(utils.isFromTrustedOrigin(message))
 })
 
 test('isFromTrustedOrigin returns true when the `isTrusted` property of message is true', t => {
-  const message = { 'isTrusted': true };
+  const message = { isTrusted: true }
   t.true(utils.isFromTrustedOrigin(message))
 })
 
 test('isFromTrustedOrigin returns false when origin is not ZAP and the `isTrusted` property of message is false', t => {
-  const message = { 'origin': 'https://somewhere.com',
-    'isTrusted': false }
-  t.false(utils.isFromTrustedOrigin(message));
+  const message = { origin: 'https://somewhere.com',
+    isTrusted: false }
+  t.false(utils.isFromTrustedOrigin(message))
 })

@@ -4,87 +4,85 @@
  * When selected displays the standard HTML report in a new window / tab
  */
 
-var HtmlReport = (function() {
+var HtmlReport = (function () {
+  // Constants
+  // todo: could probably switch this to a config file?
+  var NAME = 'htmlReport'
+  var LABEL = I18n.t('html_report_tool')
+  var ICON = 'report.png'
 
-	// Constants
-	// todo: could probably switch this to a config file?
-	var NAME = "htmlReport";
-	var LABEL = I18n.t("html_report_tool");
-	var ICON = "report.png";
+  // todo: change this to a util function that reads in a config file (json/xml)
+  function initializeStorage () {
+    var tool = {}
+    tool.name = NAME
+    tool.label = LABEL
+    tool.data = ''
+    tool.icon = ICON
+    tool.panel = ''
+    tool.position = 0
+    utils.writeTool(tool)
+  }
 
-	//todo: change this to a util function that reads in a config file (json/xml)
-	function initializeStorage() {
-		var tool = {};
-		tool.name = NAME;
-		tool.label = LABEL;
-		tool.data = '';
-		tool.icon = ICON;
-		tool.panel = "";
-		tool.position = 0;
-		utils.writeTool(tool);
-	}
+  function showOptions (tabId) {
+    var config = {}
 
+    config.tool = NAME
+    config.toolLabel = LABEL
+    config.options = { remove: I18n.t('common_remove') }
 
-	function showOptions(tabId) {
-		var config = {};
+    utils.messageFrame(tabId, 'display', { action: 'showButtonOptions', config: config })
+      .then(response => {
+        // Handle button choice
+        if (response.id == 'remove') {
+          utils.removeToolFromPanel(tabId, NAME)
+        }
+      })
+      .catch(utils.errorHandler)
+  }
 
-		config.tool = NAME;
-		config.toolLabel = LABEL;
-		config.options = {remove: I18n.t("common_remove")};
+  function showHtmlReport (tabId) {
+    utils.messageFrame(tabId, 'display', { action: 'showHtmlReport' })
+      .catch(utils.errorHandler)
+  }
 
-		utils.messageFrame(tabId, "display", {action:"showButtonOptions", config:config})
-			.then(response => {
-				// Handle button choice
-				if (response.id == "remove") {
-					utils.removeToolFromPanel(tabId, NAME);
-				}
-			})
-			.catch(utils.errorHandler);
-	}
+  self.addEventListener('activate', event => {
+    initializeStorage()
+  })
 
-	function showHtmlReport(tabId) {
-		utils.messageFrame(tabId, "display", {action:"showHtmlReport"})
-			.catch(utils.errorHandler);
-	}
+  self.addEventListener('message', event => {
+    var message = event.data
 
-	self.addEventListener("activate", event => {
-		initializeStorage();
-	});
+    // Broadcasts
+    switch (message.action) {
+      case 'initializeTools':
+        initializeStorage()
+        break
 
-	self.addEventListener("message", event => {
-		var message = event.data;
+      default:
+        break
+    }
 
-		// Broadcasts
-		switch(message.action) {
-			case "initializeTools":
-				initializeStorage();
-				break;
+    // Directed
+    if (message.tool === NAME) {
+      switch (message.action) {
+        case 'buttonClicked':
+          showHtmlReport(message.tabId)
+          break
 
-			default:
-				break;
-		}
+        case 'buttonMenuClicked':
+          showOptions(message.tabId)
+          break
 
-		// Directed
-		if (message.tool === NAME) {
-			switch(message.action) {
-				case "buttonClicked":
-					showHtmlReport(message.tabId);
-					break;
+        default:
+          break
+      }
+    }
+  })
 
-				case "buttonMenuClicked":
-					showOptions(message.tabId);
-					break;
+  return {
+    name: NAME,
+    initialize: initializeStorage
+  }
+})()
 
-				default:
-					break;
-			}
-		}
-	});
-
-	return {
-		name: NAME,
-		initialize: initializeStorage
-	};
-})();
-
-self.tools[HtmlReport.name] = HtmlReport;
+self.tools[HtmlReport.name] = HtmlReport

@@ -10,7 +10,7 @@ module.exports = {
     './src/main/zapHomeFiles/hud/panel.js'
   ],
   resolveLoader: {
-    alias: {'zap-loader': path.join(__dirname, 'loaders/zap-loader.js')}
+    alias: { 'zap-loader': path.join(__dirname, 'loaders/zap-loader.js') }
   },
   module: {
     rules: [
